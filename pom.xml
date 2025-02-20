@@ -2,8 +2,32 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <name>jmasklib</name>
+    <url>https://github.com/belovia/field-masker.git</url>
+    <scm>
+        <connection>
+            scm:git:git@github.com:belovia/field-masker.git
+        </connection>
+        <developerConnection>
+            scm:git:ssh://git@github.com:belovia/field-masker.git
+        </developerConnection>
+        <url>
+            https://github.com/belovia/field-masker
+        </url>
+    </scm>
+    <developers>
+        <developer>
+            <name>Ivan Belov</name>
+            <email>ivanincredible@gmail.com</email>
+            <roles>
+                <role>
+                    Owner
+                </role>
+            </roles>
+        </developer>
+    </developers>
 
-    <groupId>ru.belovia.mask-lib</groupId>
+    <groupId>ru.belovia.masklib</groupId>
     <artifactId>field-masker</artifactId>
     <version>1.0.0</version>
 
