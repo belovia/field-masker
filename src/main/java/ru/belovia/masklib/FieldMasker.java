@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.util.Set;
+import java.util.Map;
 
 /**
  * A utility class for masking sensitive data in strings.
@@ -54,13 +54,13 @@ public class FieldMasker {
     }
 
 
-    public String maskJson(String json, boolean maskFully, Set<String> fieldNames, Range range) {
+    public String maskJson(String json, Map<String, MaskType> fieldNames, Range range) {
         if (json == null || json.isBlank()) return json;
 
         try {
             JsonNode jsonNode = objectMapper.readTree(json);
             if (jsonNode.isObject()) {
-                maskFields((ObjectNode) jsonNode, maskFully, fieldNames, range);
+                maskFields((ObjectNode) jsonNode, fieldNames, range);
             }
             return objectMapper.writeValueAsString(jsonNode);
         } catch (JsonProcessingException e) {
@@ -68,17 +68,22 @@ public class FieldMasker {
         }
     }
 
-    private void maskFields(ObjectNode jsonNode, boolean maskFully, Set<String> fieldNames, Range range) {
+    private void maskFields(ObjectNode jsonNode, Map<String, MaskType> fieldNames, Range range) {
         jsonNode.fieldNames().forEachRemaining(fieldName -> {
             JsonNode field = jsonNode.get(fieldName);
+            MaskType maskType = fieldNames.get(fieldName);
 
-            if (fieldNames.contains(fieldName)) {
+            if (maskType != null) {
+                if (field.isTextual() || field.isNumber()) {
                     String fieldValue = field.asText();
-                    if (maskFully) {
+                    if (maskType == MaskType.FULL) {
                         jsonNode.put(fieldName, maskFull(fieldValue));
-                    } else {
+                    } else if (maskType == MaskType.PARTIALLY) {
                         jsonNode.put(fieldName, maskPartial(fieldValue, range));
                     }
+                } else if (field.isObject()) {
+                    maskFields((ObjectNode) field, fieldNames, range);
+                }
             }
         });
     }
@@ -88,9 +93,8 @@ public class FieldMasker {
         return String.valueOf(maskingChar).repeat(input.length());
     }
 
-
     public String maskPartial(String input, Range range, char maskingChar) {
-        if (emptyInput(input)) return input;
+        if (emptyInput(input) || range == null) return input;
 
         int length = input.length();
         int start = Math.max(0, range.getFrom());
@@ -100,7 +104,6 @@ public class FieldMasker {
         for (int i = start; i < end; i++) {
             masked.setCharAt(i, maskingChar);
         }
-
         return masked.toString();
     }
 

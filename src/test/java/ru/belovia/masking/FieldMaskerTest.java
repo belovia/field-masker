@@ -3,12 +3,13 @@ package ru.belovia.masking;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import ru.belovia.masklib.FieldMasker;
+import ru.belovia.masklib.MaskType;
 import ru.belovia.masklib.Range;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -72,14 +73,14 @@ class FieldMaskerTest {
     @SneakyThrows
     void IF_maskJsonWithValidData_THEN_returnMaskedFields() {
 
-        Set<String> fieldNames = new HashSet<>();
-        fieldNames.add("testName");
-        fieldNames.add("testEmail");
-        fieldNames.add("testPhone");
-        fieldNames.add("testPassportId");
+        Map<String, MaskType> fieldNames = new HashMap<>();
+        fieldNames.put("testName", MaskType.FULL);
+        fieldNames.put("testEmail", MaskType.FULL);
+        fieldNames.put("testPhone", MaskType.FULL);
+        fieldNames.put("testPassportId", MaskType.PARTIALLY);
         String json = new String(Files.readAllBytes(Path.of("src/test/java/ru/belovia/masking/testJson.json")));
 
-        String s = fieldMasker.maskJson(json, true, fieldNames, null);
+        String s = fieldMasker.maskJson(json, fieldNames, new Range(2,6));
 
         assertNotNull(s);
         assertTrue(s.contains("testName"));
@@ -87,5 +88,6 @@ class FieldMaskerTest {
         assertTrue(s.contains("********************"));
         assertTrue(s.contains("testPhone"));
         assertTrue(s.contains("***********"));
+        assertTrue(s.contains("42****8689"));
     }
 }
