@@ -1,6 +1,11 @@
 package ru.belovia.masklib;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.util.Set;
 
 /**
  * A utility class for masking sensitive data in strings.
@@ -46,6 +51,36 @@ public class FieldMasker {
 
     public String maskPartial(String input, Range range) {
         return maskPartial(input, range, DEFAULT_MASK_CHAR);
+    }
+
+
+    public String maskJson(String json, boolean maskFully, Set<String> fieldNames, Range range) {
+        if (json == null || json.isBlank()) return json;
+
+        try {
+            JsonNode jsonNode = objectMapper.readTree(json);
+            if (jsonNode.isObject()) {
+                maskFields((ObjectNode) jsonNode, maskFully, fieldNames, range);
+            }
+            return objectMapper.writeValueAsString(jsonNode);
+        } catch (JsonProcessingException e) {
+            return json;
+        }
+    }
+
+    private void maskFields(ObjectNode jsonNode, boolean maskFully, Set<String> fieldNames, Range range) {
+        jsonNode.fieldNames().forEachRemaining(fieldName -> {
+            JsonNode field = jsonNode.get(fieldName);
+
+            if (fieldNames.contains(fieldName)) {
+                    String fieldValue = field.asText();
+                    if (maskFully) {
+                        jsonNode.put(fieldName, maskFull(fieldValue));
+                    } else {
+                        jsonNode.put(fieldName, maskPartial(fieldValue, range));
+                    }
+            }
+        });
     }
 
     public String maskFull(String input, char maskingChar) {
