@@ -78,7 +78,8 @@ class FieldMaskerTest {
         fieldNames.put("testEmail", MaskType.FULL);
         fieldNames.put("testPhone", MaskType.FULL);
         fieldNames.put("testPassportId", MaskType.PARTIALLY);
-        String json = new String(Files.readAllBytes(Path.of("src/test/java/ru/belovia/masking/testJson.json")));
+        fieldNames.put("testArray", MaskType.PARTIALLY);
+        String json = new String(Files.readAllBytes(Path.of("src/test/java/ru/belovia/masking/testdata/testJson.json")));
 
         String s = fieldMasker.maskJson(json, fieldNames, new Range(2,6));
 
@@ -89,5 +90,7 @@ class FieldMaskerTest {
         assertTrue(s.contains("testPhone"));
         assertTrue(s.contains("***********"));
         assertTrue(s.contains("42****8689"));
+        assertTrue(s.contains("12****8"));
+        assertTrue(s.contains("12****7890"));
     }
 }
