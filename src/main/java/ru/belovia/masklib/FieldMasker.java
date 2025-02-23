@@ -3,6 +3,7 @@ package ru.belovia.masklib;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.Map;
@@ -60,7 +61,7 @@ public class FieldMasker {
         try {
             JsonNode jsonNode = objectMapper.readTree(json);
             if (jsonNode.isObject()) {
-                maskFields((ObjectNode) jsonNode, fieldNames, range);
+                maskFields((ObjectNode) jsonNode, fieldNames, range, '*');
             }
             return objectMapper.writeValueAsString(jsonNode);
         } catch (JsonProcessingException e) {
@@ -68,24 +69,49 @@ public class FieldMasker {
         }
     }
 
-    private void maskFields(ObjectNode jsonNode, Map<String, MaskType> fieldNames, Range range) {
-        jsonNode.fieldNames().forEachRemaining(fieldName -> {
-            JsonNode field = jsonNode.get(fieldName);
-            MaskType maskType = fieldNames.get(fieldName);
+    private void maskFields(ObjectNode jsonNode, Map<String, MaskType> fieldNames, Range range, char maskChar) {
+        jsonNode.fieldNames().forEachRemaining(currentFieldName -> {
+            JsonNode field = jsonNode.get(currentFieldName);
+            MaskType maskType = fieldNames.get(currentFieldName);
 
             if (maskType != null) {
                 if (field.isTextual() || field.isNumber()) {
                     String fieldValue = field.asText();
                     if (maskType == MaskType.FULL) {
-                        jsonNode.put(fieldName, maskFull(fieldValue));
+                        jsonNode.put(currentFieldName, maskFull(fieldValue));
                     } else if (maskType == MaskType.PARTIALLY) {
-                        jsonNode.put(fieldName, maskPartial(fieldValue, range));
+                        jsonNode.put(currentFieldName, maskPartial(fieldValue, range));
                     }
+                } else if (field.isArray()) {
+                    maskArray((ArrayNode) field, currentFieldName, fieldNames, range, maskChar);
                 } else if (field.isObject()) {
-                    maskFields((ObjectNode) field, fieldNames, range);
+                    maskFields((ObjectNode) field, fieldNames, range, maskChar);
                 }
             }
         });
+    }
+
+    private void maskArray(ArrayNode arrayNode, String fieldName, Map<String, MaskType> fieldNames, Range range, char maskChar) {
+        MaskType maskType = fieldNames.get(fieldName);
+
+        if (maskType != null) {
+            for (int i = 0; i < arrayNode.size(); i++) {
+                JsonNode arrayElement = arrayNode.get(i);
+
+                if (arrayElement.isTextual() || arrayElement.isNumber()) {
+                    String elementValue = arrayElement.asText();
+                    if (maskType == MaskType.FULL) {
+                        arrayNode.set(i, maskFull(elementValue));
+                    } else if (maskType == MaskType.PARTIALLY) {
+                        arrayNode.set(i, maskPartial(elementValue, range));
+                    }
+                } else if (arrayElement.isObject()) {
+                    maskFields((ObjectNode) arrayElement, fieldNames, range, maskChar);
+                } else if (arrayElement.isArray()) {
+                    maskArray((ArrayNode) arrayElement, fieldName, fieldNames, range, maskChar);
+                }
+            }
+        }
     }
 
     public String maskFull(String input, char maskingChar) {

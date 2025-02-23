@@ -2,5 +2,6 @@
   "testName" : "someTestName",
   "testEmail" : "test-email@gmail.com",
   "testPhone" : "89999999999",
-  "testPassportId" : 4234678689
+  "testPassportId" : 4234678689,
+  "testArray" : ["3", "testString", "someTest", 1235678, "1234567890"]
 }
