@@ -1,5 +1,6 @@
 package ru.belovia.masking;
 
+import lombok.Builder;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import ru.belovia.masklib.FieldMasker;
@@ -81,16 +82,72 @@ class FieldMaskerTest {
         fieldNames.put("testArray", MaskType.PARTIALLY);
         String json = new String(Files.readAllBytes(Path.of("src/test/java/ru/belovia/masking/testdata/testJson.json")));
 
-        String s = fieldMasker.maskJson(json, fieldNames, new Range(2,6));
+        String result = fieldMasker.maskJson(json, fieldNames, new Range(2,6));
 
-        assertNotNull(s);
-        assertTrue(s.contains("testName"));
-        assertTrue(s.contains("********"));
-        assertTrue(s.contains("********************"));
-        assertTrue(s.contains("testPhone"));
-        assertTrue(s.contains("***********"));
-        assertTrue(s.contains("42****8689"));
-        assertTrue(s.contains("12****8"));
-        assertTrue(s.contains("12****7890"));
+        assertNotNull(result);
+        assertTrue(result.contains("testName"));
+        assertTrue(result.contains("********"));
+        assertTrue(result.contains("********************"));
+        assertTrue(result.contains("testPhone"));
+        assertTrue(result.contains("***********"));
+        assertTrue(result.contains("42****8689"));
+        assertTrue(result.contains("12****8"));
+        assertTrue(result.contains("12****7890"));
+    }
+
+
+    @Builder
+    public static class TestClass {
+        private String testStringField;
+        private Integer testIntegerField;
+
+        public String toString() {
+            return "TestClass{" +
+                    " 'testStringField' : " + testStringField +
+                    ", 'testIntegerField' : " + testIntegerField +
+                    "}";
+        }
+    }
+
+    @Test
+    void IF_maskObjectWithFullMaskType_THEN_returnOK() {
+        // Arrange
+        TestClass testClass = TestClass.builder()
+                .testStringField("testStringField")
+                .testIntegerField(12345)
+                .build();
+
+        Map<String, MaskType> pattern = new HashMap<>();
+        pattern.put("testStringField", MaskType.FULL);
+        pattern.put("testIntegerField", MaskType.FULL);
+
+        // Action
+        String result = fieldMasker.maskObject(testClass, pattern, null);
+
+        // Asserts
+        assertNotNull(result);
+        assertTrue(result.contains("**********"));
+        assertTrue(result.contains("*****"));
+    }
+
+    @Test
+    void IF_maskObjectWithPartialMaskType_THEN_returnOK() {
+        // Arrange
+        TestClass testClass = TestClass.builder()
+                .testStringField("testStringField")
+                .testIntegerField(12345)
+                .build();
+
+        Map<String, MaskType> pattern = new HashMap<>();
+        pattern.put("testStringField", MaskType.PARTIALLY);
+        pattern.put("testIntegerField", MaskType.PARTIALLY);
+
+        // Action
+        String result = fieldMasker.maskObject(testClass, pattern, new Range(2, 10));
+
+        // Asserts
+        assertNotNull(result);
+        assertTrue(result.contains("te********Field"));
+        assertTrue(result.contains("12***"));
     }
 }
