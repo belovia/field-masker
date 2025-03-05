@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -38,7 +41,6 @@ import java.util.Map;
  *
  * @see Range
  */
-
 public class FieldMasker {
 
     private static final char DEFAULT_MASK_CHAR = '*';
@@ -112,6 +114,45 @@ public class FieldMasker {
                 }
             }
         }
+    }
+
+    public String maskObject(Object obj, Map<String, MaskType> fieldNames, Range range) {
+        if (obj == null) return "null";
+
+        ObjectNode jsonNode = objectMapper.createObjectNode();
+
+        Field[] fields = Arrays.stream(obj.getClass().getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> !Modifier.isTransient(field.getModifiers()))
+                .toArray(Field[]::new);
+
+        for (Field field : fields) {
+            field.setAccessible(true);
+            String fieldName = field.getName();
+            MaskType maskType = fieldNames.get(fieldName);
+
+            try {
+                Object fieldValue = field.get(obj);
+                if (fieldValue != null) {
+                    String maskedValue = (maskType != null)
+                            ? applyMask(fieldValue.toString(), maskType, range)
+                            : fieldValue.toString();
+
+                    jsonNode.put(fieldName, maskedValue);
+                }
+            } catch (Exception e) {
+                jsonNode.put(fieldName, "[MASKED]");
+            }
+        }
+
+        return jsonNode.toString();
+    }
+
+    private String applyMask(String value, MaskType maskType, Range range) {
+        return switch (maskType) {
+            case FULL -> maskFull(value);
+            case PARTIALLY -> maskPartial(value, range);
+        };
     }
 
     public String maskFull(String input, char maskingChar) {
